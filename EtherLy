@@ -1,0 +1,350 @@
+# Scaffold starter - Magazin profesional (Next.js frontend + Express backend + Worker)
+
+---
+Acesta este un pachet *starter* gata de pus într-un repo GitHub. Conține fișiere esențiale pentru a porni local (pe laptop) și instrucțiuni de bază pentru upload pe GitHub.
+
+**Pași rapizi:**
+1. Creează un repo gol pe GitHub numit `magazin-proprietar`.
+2. Clone repo pe laptop sau încarcă fișierele direct din telefon/browser.
+3. Rulează frontend și backend local pentru test.
+
+---
+
+## Structura proiectului (fișiere incluse mai jos)
+```
+magazin-proprietar/
+├─ frontend/ (Next.js)
+│  ├─ package.json
+│  ├─ next.config.js
+│  ├─ .env.local.example
+│  ├─ pages/
+│  │  ├─ index.tsx
+│  │  ├─ products/[slug].tsx
+│  │  ├─ cart.tsx
+│  │  └─ api/checkout.ts
+│  ├─ components/ProductCard.tsx
+│  └─ styles/globals.css
+├─ backend/ (Express)
+│  ├─ package.json
+│  ├─ .env.example
+│  ├─ server.js
+│  └─ routes/
+│     ├─ products.js
+│     └─ orders.js
+├─ worker/
+│  ├─ worker.js
+├─ docker-compose.yml
+└─ README.md
+```
+
+---
+
+# FILE: README.md
+```markdown
+# Magazin Proprietar - Starter
+
+Repo starter: frontend Next.js + backend Express + worker. Ideal pentru dropshipping MVP.
+
+## Setup local (pe laptop)
+
+### Frontend
+1. cd frontend
+2. cp .env.local.example .env.local  (completează cheile)
+3. npm install
+4. npm run dev  (pornește pe http://localhost:3000)
+
+### Backend
+1. cd backend
+2. cp .env.example .env
+3. npm install
+4. node server.js  (pornește pe http://localhost:4000)
+
+### Worker
+1. cd worker
+2. npm install
+3. node worker.js
+
+## Deploy
+- Creează repo GitHub și urcă fișierele
+- Folosește Vercel pentru frontend (conectează repo)
+- Folosește Render / DigitalOcean / Heroku pentru backend
+
+## Note
+- Înlocuiește cheile de test Stripe din .env cu cele reale la lansare.
+- Pentru integrare dropshipping, adaugă module/API connectors în backend/suppliers.
+```
+
+---
+
+# FILE: docker-compose.yml
+```yaml
+version: '3.8'
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - '3000:3000'
+  backend:
+    build: ./backend
+    ports:
+      - '4000:4000'
+  worker:
+    build: ./worker
+```
+
+---
+
+# FRONTEND
+
+## FILE: frontend/package.json
+```json
+{
+  "name": "magazin-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "13.4.5",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "axios": "1.4.0"
+  }
+}
+```
+
+## FILE: frontend/next.config.js
+```js
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+}
+module.exports = nextConfig
+```
+
+## FILE: frontend/.env.local.example
+```
+NEXT_PUBLIC_API_URL=http://localhost:4000
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_YOUR_KEY
+```
+
+## FILE: frontend/pages/index.tsx
+```tsx
+import React from 'react'
+import Link from 'next/link'
+import ProductCard from '../components/ProductCard'
+
+const sampleProducts = [{slug:'produs-1',title:'Produs 1',price:29.99}, {slug:'produs-2',title:'Produs 2',price:19.5}]
+
+export default function Home(){
+  return (
+    <div style={{padding:20}}>
+      <h1>Magazin Proprietar - Demo</h1>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:20}}>
+        {sampleProducts.map(p=> <ProductCard key={p.slug} product={p} />)}
+      </div>
+    </div>
+  )
+}
+```
+
+## FILE: frontend/pages/products/[slug].tsx
+```tsx
+import React from 'react'
+import { useRouter } from 'next/router'
+
+export default function ProductPage(){
+  const r = useRouter()
+  const {slug} = r.query
+  return (
+    <div style={{padding:20}}>
+      <h2>Pagina produs: {slug}</h2>
+      <p>Descriere demo. Aici vom afișa detalii, variante și butonul Add to Cart.</p>
+    </div>
+  )
+}
+```
+
+## FILE: frontend/pages/cart.tsx
+```tsx
+import React from 'react'
+
+export default function Cart(){
+  return (
+    <div style={{padding:20}}>
+      <h2>Coș</h2>
+      <p>Coș demo — integrare cu localStorage sau backend.</p>
+    </div>
+  )
+}
+```
+
+## FILE: frontend/pages/api/checkout.ts
+```ts
+// Endpoint local care apelează backend pentru a genera sesiune Stripe (demo)
+import type { NextApiRequest, NextApiResponse } from 'next'
+import axios from 'axios'
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse){
+  try{
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+    const resp = await axios.post(`${apiUrl}/create-checkout-session`, req.body)
+    res.status(200).json(resp.data)
+  }catch(e:any){
+    res.status(500).json({error: e.message})
+  }
+}
+```
+
+## FILE: frontend/components/ProductCard.tsx
+```tsx
+import React from 'react'
+import Link from 'next/link'
+
+export default function ProductCard({product}:{product:any}){
+  return (
+    <div style={{border:'1px solid #ddd',padding:12,borderRadius:8}}>
+      <h3>{product.title}</h3>
+      <p>Price: {product.price} EUR</p>
+      <Link href={`/products/${product.slug}`}><a>Vezi produs</a></Link>
+    </div>
+  )
+}
+```
+
+## FILE: frontend/styles/globals.css
+```css
+body{font-family:Inter, Arial, sans-serif;margin:0;padding:0}
+```
+
+---
+
+# BACKEND (Express minimal)
+
+## FILE: backend/package.json
+```json
+{
+  "name": "magazin-backend",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "4.18.2",
+    "cors": "2.8.5",
+    "body-parser": "1.20.2",
+    "axios": "1.4.0",
+    "stripe": "12.15.0"
+  }
+}
+```
+
+## FILE: backend/.env.example
+```
+PORT=4000
+STRIPE_SECRET_KEY=sk_test_YOUR_KEY
+FRONTEND_URL=http://localhost:3000
+```
+
+## FILE: backend/server.js
+```js
+require('dotenv').config()
+const express = require('express')
+const cors = require('cors')
+const bodyParser = require('body-parser')
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_FAKE')
+
+const app = express()
+app.use(cors())
+app.use(bodyParser.json())
+
+// demo products in-memory
+const PRODUCTS = [
+  {id:1,slug:'produs-1',title:'Produs 1',price:2999},
+  {id:2,slug:'produs-2',title:'Produs 2',price:1950}
+]
+
+app.get('/products', (req,res)=> res.json(PRODUCTS))
+
+app.post('/create-checkout-session', async (req,res)=>{
+  try{
+    const {items} = req.body
+    const line_items = items.map((it)=>({price_data:{currency:'eur',product_data:{name:it.name},unit_amount:Math.round(it.price*100)},quantity:it.qty}))
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items,
+      mode: 'payment',
+      success_url: (process.env.FRONTEND_URL||'http://localhost:3000') + '/?success=1',
+      cancel_url: (process.env.FRONTEND_URL||'http://localhost:3000') + '/?canceled=1'
+    })
+    res.json({id: session.id, url: session.url})
+  }catch(e){
+    console.error(e)
+    res.status(500).json({error: 'stripe error'})
+  }
+})
+
+// simple orders POST (to be extended for dropshipping)
+app.post('/orders', (req,res)=>{
+  const order = req.body
+  // aici poți valida și trimite la supplier via API
+  console.log('Order received', order)
+  res.json({ok:true,orderId: Date.now()})
+})
+
+app.listen(process.env.PORT||4000, ()=> console.log('Backend started on port', process.env.PORT||4000))
+```
+
+## FILE: backend/routes/products.js
+```js
+// optional separate router
+```
+
+## FILE: backend/routes/orders.js
+```js
+// optional separate router
+```
+
+---
+
+# WORKER (job queue demo)
+
+## FILE: worker/package.json
+```json
+{
+  "name":"magazin-worker",
+  "version":"1.0.0",
+  "scripts":{
+    "start":"node worker.js"
+  },
+  "dependencies":{
+    "axios":"1.4.0"
+  }
+}
+```
+
+## FILE: worker/worker.js
+```js
+const axios = require('axios')
+
+async function pollOrders(){
+  try{
+    // demo: fetch new orders from backend
+    const resp = await axios.get('http://localhost:4000/orders/pending').catch(()=>({data:[]}))
+    const orders = resp.data || []
+    for(const o of orders){
+      console.log('Processing order', o.id)
+      // map to supplier + push via API
+    }
+  }catch(e){console.error(e)}
+}
+
+setInterval(pollOrders, 15000)
+console.log('Worker started (demo polling every 15s)')
+```
+
+
